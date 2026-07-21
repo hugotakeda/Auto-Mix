@@ -20,22 +20,22 @@ import { updatePlayerRole, getDatabase } from '../../utils/database.js';
 
 // --- Player roles/positions ---
 const PLAYER_ROLES = [
-    { label: 'IGL', value: 'IGL', description: 'In-Game Leader — lider tatico do time' },
+    { label: 'IGL', value: 'IGL', description: 'In-Game Leader — líder tático do time' },
     { label: 'Entry Fragger', value: 'Entry Fragger', description: 'Primeiro a entrar no bombsite' },
     { label: 'AWPer', value: 'AWPer', description: 'Especialista em AWP' },
-    { label: 'Support', value: 'Support', description: 'Suporte com utilitarias e trades' },
-    { label: 'Lurker', value: 'Lurker', description: 'Joga isolado coletando informacao' },
-    { label: 'Anchor', value: 'Anchor', description: 'Ancora — segura o bombsite na defesa' },
+    { label: 'Support', value: 'Support', description: 'Suporte com utilitárias e trades' },
+    { label: 'Lurker', value: 'Lurker', description: 'Joga isolado coletando informação' },
+    { label: 'Anchor', value: 'Anchor', description: 'Âncora — segura o bombsite na defesa' },
 ];
 
 export const data = new SlashCommandBuilder()
     .setName('setup')
-    .setDescription('Configura os cargos de nivel GC, Faceit e posicao do jogador')
+    .setDescription('Configura os cargos de nível GC, Faceit e posição do jogador')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addChannelOption(option =>
         option
             .setName('canal')
-            .setDescription('Canal onde o painel de selecao sera enviado')
+            .setDescription('Canal onde o painel de seleção será enviado')
             .setRequired(true)
             .addChannelTypes(ChannelType.GuildText)
     );
@@ -44,7 +44,14 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     const guildId = interaction.guildId;
     if (!guildId) return;
 
-    const guild = interaction.guild!;
+    let guild = interaction.guild;
+    if (!guild) {
+        guild = await interaction.client.guilds.fetch(guildId).catch(() => null) as any;
+        if (!guild) {
+            await interaction.reply({ content: 'Não foi possível encontrar o servidor.', flags: 64 });
+            return;
+        }
+    }
     const targetChannel = interaction.options.getChannel('canal', true) as TextChannel;
 
     await interaction.deferReply({ flags: 64 });
@@ -66,7 +73,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
                 role = await guild.roles.create({
                     name: roleName,
                     color: hexToDiscordColor(color),
-                    reason: 'Auto Mix — Setup de niveis GC',
+                    reason: 'Auto Mix — Setup de níveis GC',
                     mentionable: false,
                     hoist: false,
                 });
@@ -92,7 +99,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
                 role = await guild.roles.create({
                     name: roleName,
                     color: hexToDiscordColor(color),
-                    reason: 'Auto Mix — Setup de niveis Faceit',
+                    reason: 'Auto Mix — Setup de níveis Faceit',
                     mentionable: false,
                     hoist: false,
                 });
@@ -119,7 +126,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
                 role = await guild.roles.create({
                     name: roleName,
                     color: hexToDiscordColor(POSITION_COLOR),
-                    reason: 'Auto Mix — Setup de posicoes',
+                    reason: 'Auto Mix — Setup de posições',
                     mentionable: false,
                     hoist: false,
                 });
@@ -144,7 +151,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     const gcSelect = new StringSelectMenuBuilder()
         .setCustomId('setup_gc_level')
-        .setPlaceholder('Selecionar nivel da Gamersclub')
+        .setPlaceholder('Selecionar nível da Gamersclub')
         .setMinValues(0)
         .setMaxValues(1)
         .addOptions(gcOptions);
@@ -161,7 +168,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     const faceitSelect = new StringSelectMenuBuilder()
         .setCustomId('setup_faceit_level')
-        .setPlaceholder('Selecionar nivel da Faceit')
+        .setPlaceholder('Selecionar nível da Faceit')
         .setMinValues(0)
         .setMaxValues(1)
         .addOptions(faceitOptions);
@@ -176,7 +183,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     const roleSelect = new StringSelectMenuBuilder()
         .setCustomId('setup_role_select')
-        .setPlaceholder('Selecionar sua posicao no jogo')
+        .setPlaceholder('Selecionar sua posição no jogo')
         .setMinValues(0)
         .setMaxValues(1)
         .addOptions(roleOptions);
@@ -188,13 +195,13 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     // --- Build embed ---
     const setupEmbed = createEmbed(interaction)
-        .setTitle('Configuracao de Perfil')
+        .setTitle('Configuração de Perfil')
         .setDescription(
             'Utilize os menus abaixo para configurar o seu perfil.\n\n' +
-            '**Gamersclub** — Selecione o seu nivel atual na GC\n' +
-            '**Faceit** — Selecione o seu nivel atual na Faceit\n' +
-            '**Posicao** — Selecione a sua funcao principal no jogo\n\n' +
-            'Para remover uma selecao, basta abrir o menu e enviar sem selecionar nenhuma opcao.'
+            '**Gamersclub** — Selecione o seu nível atual na GC.\n' +
+            '**Faceit** — Selecione o seu nível atual na Faceit.\n' +
+            '**Posição** — Selecione a sua função principal no jogo.\n\n' +
+            'Para remover uma seleção, basta abrir o menu e enviar sem selecionar nenhuma opção.'
         );
 
     // Send to target channel
@@ -205,7 +212,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     // --- Report to admin ---
     const totalCreated = gcRolesCreated.length + faceitRolesCreated.length + positionRolesCreated.length;
-    let reportDesc = `Painel de configuracao enviado para ${targetChannel}.\n\n`;
+    let reportDesc = `Painel de configuração enviado para ${targetChannel}.\n\n`;
 
     if (totalCreated > 0) {
         reportDesc += `**Cargos criados:** ${totalCreated}\n`;
@@ -216,10 +223,10 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
             reportDesc += `Faceit: ${faceitRolesCreated.join(', ')}\n`;
         }
         if (positionRolesCreated.length > 0) {
-            reportDesc += `Posicoes: ${positionRolesCreated.join(', ')}\n`;
+            reportDesc += `Posições: ${positionRolesCreated.join(', ')}\n`;
         }
     } else {
-        reportDesc += 'Todos os cargos ja existiam no servidor.';
+        reportDesc += 'Todos os cargos já existiam no servidor.';
     }
 
     await interaction.editReply({
@@ -234,7 +241,14 @@ export async function handleSelectMenu(interaction: StringSelectMenuInteraction)
     const guildId = interaction.guildId;
     if (!guildId) return;
 
-    const guild = interaction.guild!;
+    let guild = interaction.guild;
+    if (!guild) {
+        guild = await interaction.client.guilds.fetch(guildId).catch(() => null) as any;
+        if (!guild) {
+            await interaction.reply({ content: 'Não foi possível encontrar o servidor.', flags: 64 });
+            return;
+        }
+    }
     const member = await guild.members.fetch(interaction.user.id).catch(() => null);
     if (!member) return;
 
@@ -253,7 +267,7 @@ export async function handleSelectMenu(interaction: StringSelectMenuInteraction)
 
         if (interaction.values.length === 0) {
             await interaction.editReply({
-                embeds: [createEmbed(interaction).setDescription('Seu nivel da Gamersclub foi removido.')],
+                embeds: [createEmbed(interaction).setDescription('Seu nível da Gamersclub foi removido.')],
             });
             return;
         }
@@ -265,11 +279,11 @@ export async function handleSelectMenu(interaction: StringSelectMenuInteraction)
         if (role) {
             await member.roles.add(role);
             await interaction.editReply({
-                embeds: [createEmbed(interaction).setDescription(`Seu nivel da Gamersclub foi atualizado para **${roleName}**.`)],
+                embeds: [createEmbed(interaction).setDescription(`Seu nível da Gamersclub foi atualizado para **${roleName}**.`)],
             });
         } else {
             await interaction.editReply({
-                embeds: [createErrorEmbed(`Cargo ${roleName} nao encontrado. Execute /setup novamente.`, interaction)],
+                embeds: [createErrorEmbed(`Cargo ${roleName} não encontrado. Execute /setup novamente.`, interaction)],
             });
         }
         return;
@@ -285,7 +299,7 @@ export async function handleSelectMenu(interaction: StringSelectMenuInteraction)
 
         if (interaction.values.length === 0) {
             await interaction.editReply({
-                embeds: [createEmbed(interaction).setDescription('Seu nivel da Faceit foi removido.')],
+                embeds: [createEmbed(interaction).setDescription('Seu nível da Faceit foi removido.')],
             });
             return;
         }
@@ -297,11 +311,11 @@ export async function handleSelectMenu(interaction: StringSelectMenuInteraction)
         if (role) {
             await member.roles.add(role);
             await interaction.editReply({
-                embeds: [createEmbed(interaction).setDescription(`Seu nivel da Faceit foi atualizado para **${roleName}**.`)],
+                embeds: [createEmbed(interaction).setDescription(`Seu nível da Faceit foi atualizado para **${roleName}**.`)],
             });
         } else {
             await interaction.editReply({
-                embeds: [createErrorEmbed(`Cargo ${roleName} nao encontrado. Execute /setup novamente.`, interaction)],
+                embeds: [createErrorEmbed(`Cargo ${roleName} não encontrado. Execute /setup novamente.`, interaction)],
             });
         }
         return;
@@ -320,7 +334,7 @@ export async function handleSelectMenu(interaction: StringSelectMenuInteraction)
             // Also clear from database
             updatePlayerRole(interaction.user.id, guildId, '');
             await interaction.editReply({
-                embeds: [createEmbed(interaction).setDescription('Sua posicao foi removida.')],
+                embeds: [createEmbed(interaction).setDescription('Sua posição foi removida.')],
             });
             return;
         }
@@ -333,11 +347,11 @@ export async function handleSelectMenu(interaction: StringSelectMenuInteraction)
             // Save to database
             updatePlayerRole(interaction.user.id, guildId, posValue);
             await interaction.editReply({
-                embeds: [createEmbed(interaction).setDescription(`Sua posicao foi atualizada para **${posValue}**.`)],
+                embeds: [createEmbed(interaction).setDescription(`Sua posição foi atualizada para **${posValue}**.`)],
             });
         } else {
             await interaction.editReply({
-                embeds: [createErrorEmbed(`Cargo ${posValue} nao encontrado. Execute /setup novamente.`, interaction)],
+                embeds: [createErrorEmbed(`Cargo ${posValue} não encontrado. Execute /setup novamente.`, interaction)],
             });
         }
         return;

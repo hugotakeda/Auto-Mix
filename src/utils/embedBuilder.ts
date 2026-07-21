@@ -7,11 +7,9 @@ export function createEmbed(interaction?: CommandInteraction | MessageComponentI
 
     if (interaction && interaction.guild) {
         embed.setFooter({
-            text: `AUTO MIX • ${interaction.guild.name}`,
+            text: interaction.guild.name,
             iconURL: interaction.client.user?.displayAvatarURL() ?? undefined
         });
-    } else {
-        embed.setFooter({ text: 'AUTO MIX' });
     }
     
     embed.setTimestamp();
@@ -26,11 +24,9 @@ export function createErrorEmbed(description: string, interaction?: CommandInter
         
     if (interaction && interaction.guild) {
         embed.setFooter({
-            text: `AUTO MIX • ${interaction.guild.name}`,
+            text: interaction.guild.name,
             iconURL: interaction.client.user?.displayAvatarURL() ?? undefined
         });
-    } else {
-        embed.setFooter({ text: 'AUTO MIX' });
     }
     
     embed.setTimestamp();

@@ -2,6 +2,9 @@ import {
     SlashCommandBuilder,
     type ChatInputCommandInteraction,
     AttachmentBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
 } from 'discord.js';
 import { createEmbed } from '../../utils/embedBuilder.js';
 import { getDatabase, getPlayer, upsertPlayer } from '../../utils/database.js';
@@ -85,6 +88,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         matchesPlayed: player?.matches_played ?? 0,
         totalKills: player?.total_kills ?? 0,
         totalDeaths: player?.total_deaths ?? 0,
+        wins: player?.wins ?? 0,
+        losses: player?.losses ?? 0,
         gcLevel,
         faceitLevel,
     });
@@ -94,8 +99,26 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     const embed = createEmbed(interaction)
         .setImage('attachment://perfil.png');
 
+    const isOwnProfile = targetUser.id === interaction.user.id;
+    const components: ActionRowBuilder<ButtonBuilder>[] = [];
+
+    if (isOwnProfile) {
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`reset_matches_${interaction.user.id}`)
+                .setLabel('Zerar Partidas')
+                .setStyle(ButtonStyle.Danger),
+            new ButtonBuilder()
+                .setCustomId(`reset_kd_${interaction.user.id}`)
+                .setLabel('Zerar KD')
+                .setStyle(ButtonStyle.Danger)
+        );
+        components.push(row);
+    }
+
     await interaction.editReply({
         embeds: [embed],
         files: [attachment],
+        components: components,
     });
 }

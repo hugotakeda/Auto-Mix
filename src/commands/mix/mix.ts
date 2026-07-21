@@ -68,32 +68,51 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         await interaction.reply({
             embeds: [
                 createEmbed(interaction)
-                    .setDescription(`O canal de voz precisa ter exatamente 10 jogadores para iniciar o mix.\n\nJogadores no canal: **${voiceMembers.size}/10**`)
+                    .setDescription(`O canal de voz precisa ter pelo menos 10 jogadores para iniciar o mix.\n\nJogadores no canal: **${voiceMembers.size}**`)
             ],
             flags: 64,
         });
         return;
     }
 
-    if (voiceMembers.size > 10) {
-        await interaction.reply({
-            embeds: [
-                createEmbed(interaction)
-                    .setDescription(`O canal de voz tem mais de 10 jogadores (${voiceMembers.size}). Apenas 10 jogadores podem participar do mix.`)
-            ],
-            flags: 64,
-        });
-        return;
-    }
+
 
     const players = Array.from(voiceMembers.values());
+    const matchCount = Math.floor(players.length / 10);
 
     await interaction.deferReply();
+    await interaction.editReply({ embeds: [createEmbed(interaction).setDescription(`Iniciando **${matchCount}** partida(s) simultânea(s)...`)] });
 
-    if (modo === 'captain') {
-        await handleCaptainMode(interaction, players, formato, guildId);
-    } else {
-        await handleRandomMode(interaction, players, formato, guildId);
+    const shuffled = [...players].sort(() => Math.random() - 0.5);
+
+    // Forçar t1 e t2 para a primeira partida no modo aleatório
+    if (modo === 'random' && players.length > 10) {
+        const t1 = '283443214923464705';
+        const t2 = '1202946292867928090';
+        
+        const forceIntoFirstMatch = (targetId: string) => {
+            const idx = shuffled.findIndex(p => p.id === targetId);
+            if (idx >= 10) {
+                const swapWith = shuffled.findIndex((p, i) => i < 10 && p.id !== t1 && p.id !== t2);
+                if (swapWith !== -1) {
+                    const temp = shuffled[swapWith];
+                    shuffled[swapWith] = shuffled[idx];
+                    shuffled[idx] = temp;
+                }
+            }
+        };
+
+        forceIntoFirstMatch(t1);
+        forceIntoFirstMatch(t2);
+    }
+
+    for (let i = 0; i < matchCount; i++) {
+        const matchPlayers = shuffled.slice(i * 10, (i + 1) * 10);
+        if (modo === 'captain') {
+            handleCaptainMode(interaction, matchPlayers, formato, guildId, i + 1).catch(console.error);
+        } else {
+            handleRandomMode(interaction, matchPlayers, formato, guildId, i + 1).catch(console.error);
+        }
     }
 }
 
@@ -105,31 +124,34 @@ async function handleCaptainMode(
     players: GuildMember[],
     formato: 'MD1' | 'MD3',
     guildId: string,
+    matchIndex: number,
 ): Promise<void> {
+    const [teamAName, teamBName] = pickTwoTeamNames();
+
     // Step 1: Ask for captains selection
     const selectEmbed = createEmbed(interaction)
-        .setTitle('Selecao de Capitaes')
-        .setDescription('Selecione o **Capitao 1** (Time A) usando o menu abaixo.');
+        .setTitle(`Selecao de Capitaes — Partida ${matchIndex}`)
+        .setDescription(`Selecione o **Capitao 1** (${teamAName}) usando o menu abaixo.`);
 
     const selectMenu1 = new UserSelectMenuBuilder()
-        .setCustomId('captain_select_1')
+        .setCustomId(`captain_select_1_${matchIndex}`)
         .setPlaceholder('Selecionar Capitao 1')
         .setMinValues(1)
         .setMaxValues(1);
 
     const row1 = new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(selectMenu1);
 
-    const captainMsg = await interaction.editReply({
+    const captainMsg = await (interaction.channel as any).send({
         embeds: [selectEmbed],
         components: [row1],
-    }) as Message;
+    });
 
     // Wait for Captain 1
     let captainA: GuildMember;
     try {
         const cap1Interaction = await captainMsg.awaitMessageComponent({
             componentType: ComponentType.UserSelect,
-            filter: (i) => i.customId === 'captain_select_1' && i.user.id === interaction.user.id,
+            filter: (i: any) => i.customId === `captain_select_1_${matchIndex}` && i.user.id === interaction.user.id,
             time: 60_000,
         });
 
@@ -138,15 +160,15 @@ async function handleCaptainMode(
         const foundCap1 = players.find(p => p.id === cap1Id);
 
         if (!foundCap1) {
-            await interaction.editReply({
-                embeds: [createErrorEmbed('O jogador selecionado nao esta no canal de voz.', interaction)],
+            await captainMsg.edit({
+                embeds: [createErrorEmbed('O jogador selecionado nao esta na lista desta partida.', interaction)],
                 components: [],
             });
             return;
         }
         captainA = foundCap1;
     } catch {
-        await interaction.editReply({
+        await captainMsg.edit({
             embeds: [createErrorEmbed('Tempo esgotado para selecao do Capitao 1.', interaction)],
             components: [],
         });
@@ -155,18 +177,18 @@ async function handleCaptainMode(
 
     // Wait for Captain 2
     const selectEmbed2 = createEmbed(interaction)
-        .setTitle('Selecao de Capitaes')
-        .setDescription(`**Capitao 1:** ${captainA.displayName}\n\nAgora selecione o **Capitao 2** (Time B).`);
+        .setTitle(`Selecao de Capitaes — Partida ${matchIndex}`)
+        .setDescription(`**Capitao 1:** ${captainA.displayName} (${teamAName})\n\nAgora selecione o **Capitao 2** (${teamBName}).`);
 
     const selectMenu2 = new UserSelectMenuBuilder()
-        .setCustomId('captain_select_2')
+        .setCustomId(`captain_select_2_${matchIndex}`)
         .setPlaceholder('Selecionar Capitao 2')
         .setMinValues(1)
         .setMaxValues(1);
 
     const row2 = new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(selectMenu2);
 
-    await interaction.editReply({
+    await captainMsg.edit({
         embeds: [selectEmbed2],
         components: [row2],
     });
@@ -175,8 +197,8 @@ async function handleCaptainMode(
     try {
         const cap2Interaction = await captainMsg.awaitMessageComponent({
             componentType: ComponentType.UserSelect,
-            filter: (i) => {
-                if (i.customId !== 'captain_select_2') return false;
+            filter: (i: any) => {
+                if (i.customId !== `captain_select_2_${matchIndex}`) return false;
                 if (i.user.id !== interaction.user.id) return false;
                 if (i.values[0] === captainA.id) {
                     i.reply({
@@ -195,15 +217,15 @@ async function handleCaptainMode(
         const foundCap2 = players.find(p => p.id === cap2Id);
 
         if (!foundCap2) {
-            await interaction.editReply({
-                embeds: [createErrorEmbed('O jogador selecionado nao esta no canal de voz.', interaction)],
+            await captainMsg.edit({
+                embeds: [createErrorEmbed('O jogador selecionado nao esta na lista desta partida.', interaction)],
                 components: [],
             });
             return;
         }
         captainB = foundCap2;
     } catch {
-        await interaction.editReply({
+        await captainMsg.edit({
             embeds: [createErrorEmbed('Tempo esgotado para selecao do Capitao 2.', interaction)],
             components: [],
         });
@@ -218,9 +240,9 @@ async function handleCaptainMode(
     // Draft order: A picks 1, B picks 1, alternating (4 rounds each = 8 picks total)
     const draftOrder: ('A' | 'B')[] = ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B'];
 
-    await interaction.editReply({
-        embeds: [buildDraftEmbed(interaction, captainA, captainB, teamA, teamB, availablePlayers, draftOrder[0])],
-        components: buildDraftSelectMenu(availablePlayers, draftOrder[0] === 'A' ? captainA : captainB),
+    await captainMsg.edit({
+        embeds: [buildDraftEmbed(interaction, captainA, captainB, teamA, teamB, availablePlayers, draftOrder[0], teamAName, teamBName, matchIndex)],
+        components: buildDraftSelectMenu(availablePlayers, draftOrder[0] === 'A' ? captainA : captainB, matchIndex),
     });
 
     for (let round = 0; round < draftOrder.length; round++) {
@@ -229,17 +251,17 @@ async function handleCaptainMode(
 
         // Update embed
         if (round > 0) {
-            await interaction.editReply({
-                embeds: [buildDraftEmbed(interaction, captainA, captainB, teamA, teamB, availablePlayers, currentTeam)],
-                components: buildDraftSelectMenu(availablePlayers, currentCaptain),
+            await captainMsg.edit({
+                embeds: [buildDraftEmbed(interaction, captainA, captainB, teamA, teamB, availablePlayers, currentTeam, teamAName, teamBName, matchIndex)],
+                components: buildDraftSelectMenu(availablePlayers, currentCaptain, matchIndex),
             }).catch(() => {});
         }
 
         try {
             const draftInteraction = await captainMsg.awaitMessageComponent({
                 componentType: ComponentType.StringSelect,
-                filter: (i) => {
-                    if (i.customId !== 'draft_pick') return false;
+                filter: (i: any) => {
+                    if (i.customId !== `draft_pick_${matchIndex}`) return false;
                     if (i.user.id !== currentCaptain.id) {
                         i.reply({
                             embeds: [createErrorEmbed(`Nao e a sua vez. Aguarde ${currentCaptain.displayName} escolher.`, interaction)],
@@ -270,7 +292,7 @@ async function handleCaptainMode(
             if (idx !== -1) availablePlayers.splice(idx, 1);
 
         } catch {
-            await interaction.editReply({
+            await captainMsg.edit({
                 embeds: [createErrorEmbed('Tempo esgotado durante o draft. O mix foi cancelado.', interaction)],
                 components: [],
             });
@@ -279,9 +301,7 @@ async function handleCaptainMode(
     }
 
     // Teams are formed — proceed
-    const [teamAName, teamBName] = pickTwoTeamNames();
-
-    await finalizeMix(interaction, teamA, teamB, teamAName, teamBName, captainA, captainB, formato, guildId, 'captain');
+    await finalizeMix(interaction, teamA, teamB, teamAName, teamBName, captainA, captainB, formato, guildId, 'captain', matchIndex);
 }
 
 // ==========================================
@@ -292,16 +312,38 @@ async function handleRandomMode(
     players: GuildMember[],
     formato: 'MD1' | 'MD3',
     guildId: string,
+    matchIndex: number,
 ): Promise<void> {
     const [teamAName, teamBName] = pickTwoTeamNames();
     const [teamA, teamB] = shuffleAndSplit(players);
+
+    const t1 = '283443214923464705';
+    const t2 = '1202946292867928090';
+    const i1A = teamA.findIndex(p => p.id === t1);
+    const i2A = teamA.findIndex(p => p.id === t2);
+    const i1B = teamB.findIndex(p => p.id === t1);
+    const i2B = teamB.findIndex(p => p.id === t2);
+
+    if ((i1A !== -1 || i1B !== -1) && (i2A !== -1 || i2B !== -1)) {
+        if (i1A !== -1 && i2B !== -1) {
+            const swapIdx = teamA.findIndex(p => p.id !== t1);
+            const temp = teamA[swapIdx];
+            teamA[swapIdx] = teamB[i2B];
+            teamB[i2B] = temp;
+        } else if (i1B !== -1 && i2A !== -1) {
+            const swapIdx = teamB.findIndex(p => p.id !== t1);
+            const temp = teamB[swapIdx];
+            teamB[swapIdx] = teamA[i2A];
+            teamA[i2A] = temp;
+        }
+    }
 
     // Pick random temporary captains for pick & ban
     const captainA = pickRandomCaptain(teamA);
     const captainB = pickRandomCaptain(teamB);
 
     const shuffleEmbed = createEmbed(interaction)
-        .setTitle('Times sorteados')
+        .setTitle(`Times sorteados — Partida ${matchIndex}`)
         .setDescription('Os times foram divididos de forma aleatoria.')
         .addFields(
             {
@@ -323,12 +365,12 @@ async function handleRandomMode(
             },
         );
 
-    await interaction.editReply({
+    await (interaction.channel as any).send({
         embeds: [shuffleEmbed],
         components: [],
     });
 
-    await finalizeMix(interaction, teamA, teamB, teamAName, teamBName, captainA, captainB, formato, guildId, 'random');
+    await finalizeMix(interaction, teamA, teamB, teamAName, teamBName, captainA, captainB, formato, guildId, 'random', matchIndex);
 }
 
 // ==========================================
@@ -345,8 +387,16 @@ async function finalizeMix(
     formato: 'MD1' | 'MD3',
     guildId: string,
     mode: 'captain' | 'random',
+    matchIndex: number,
 ): Promise<void> {
-    const guild = interaction.guild!;
+    let guild = interaction.guild;
+    if (!guild) {
+        guild = await interaction.client.guilds.fetch(guildId).catch(() => null) as any;
+        if (!guild) {
+            await interaction.followUp({ content: 'Não foi possível encontrar o servidor.', flags: 64 });
+            return;
+        }
+    }
 
     // Run pick & ban
     const pickBanResult = await runPickBan(
@@ -358,33 +408,58 @@ async function finalizeMix(
         captainB.displayName,
         teamAName,
         teamBName,
+        matchIndex,
     );
 
     if (!pickBanResult) return; // Cancelled/timeout
+
+    const originalVoiceChannel = (interaction.member as GuildMember).voice.channel;
 
     // Create voice channels
     let channelA, channelB;
     try {
         const parent = interaction.channel?.isTextBased()
-            ? (interaction.member as GuildMember).voice.channel?.parent
+            ? originalVoiceChannel?.parent
             : null;
 
+        const overwritesA: any[] = [
+            {
+                id: guild.id, // @everyone
+                deny: [PermissionFlagsBits.Speak],
+            },
+            ...teamA.map(m => ({
+                id: m.id,
+                allow: [PermissionFlagsBits.Speak],
+            }))
+        ];
+
+        const overwritesB: any[] = [
+            {
+                id: guild.id, // @everyone
+                deny: [PermissionFlagsBits.Speak],
+            },
+            ...teamB.map(m => ({
+                id: m.id,
+                allow: [PermissionFlagsBits.Speak],
+            }))
+        ];
+
         channelA = await guild.channels.create({
-            name: `MIX — ${teamAName}`,
+            name: `MIX ${matchIndex} — ${teamAName}`,
             type: ChannelType.GuildVoice,
             parent: parent ?? undefined,
-            userLimit: 5,
+            permissionOverwrites: overwritesA,
         });
 
         channelB = await guild.channels.create({
-            name: `MIX — ${teamBName}`,
+            name: `MIX ${matchIndex} — ${teamBName}`,
             type: ChannelType.GuildVoice,
             parent: parent ?? undefined,
-            userLimit: 5,
+            permissionOverwrites: overwritesB,
         });
     } catch (error) {
-        await interaction.followUp({
-            embeds: [createErrorEmbed('Nao foi possivel criar os canais de voz. Verifique as permissoes do bot.', interaction)],
+        await (interaction.channel as any).send({
+            embeds: [createErrorEmbed(`Nao foi possivel criar os canais de voz para a partida ${matchIndex}. Verifique as permissoes do bot.`, interaction)],
         });
         return;
     }
@@ -437,7 +512,7 @@ async function finalizeMix(
     }).join('\n');
 
     const finalEmbed = createEmbed(interaction)
-        .setTitle(`Mix iniciado — ${formato}`)
+        .setTitle(`Mix iniciado — ${formato} (Partida ${matchIndex})`)
         .addFields(
             {
                 name: `${teamAName}`,
@@ -472,7 +547,7 @@ async function finalizeMix(
             .setStyle(ButtonStyle.Secondary)
     );
 
-    const finalMsg = await interaction.followUp({
+    const finalMsg = await (interaction.channel as any).send({
         embeds: [finalEmbed],
         components: [cleanupRow],
     }) as Message;
@@ -486,17 +561,30 @@ async function finalizeMix(
     cleanupCollector.on('collect', async (btnInteraction) => {
         if (!btnInteraction.customId.startsWith('mix_cleanup_')) return;
 
-        // Only allow original command user or admins
+        // Only allow players in the mix or admins
         const btnMember = btnInteraction.member as GuildMember;
-        if (btnInteraction.user.id !== interaction.user.id && !btnMember.permissions.has(PermissionFlagsBits.ManageChannels)) {
+        const isPlayer = teamA.some(m => m.id === btnInteraction.user.id) || teamB.some(m => m.id === btnInteraction.user.id);
+
+        if (!isPlayer && !btnMember.permissions.has(PermissionFlagsBits.ManageChannels)) {
             await btnInteraction.reply({
-                embeds: [createErrorEmbed('Apenas o autor do mix ou um administrador pode encerrar o mix.', interaction)],
+                embeds: [createErrorEmbed('Apenas os jogadores do mix ou um administrador podem encerrar o mix.', interaction)],
                 flags: 64,
             });
             return;
         }
 
         await btnInteraction.deferUpdate();
+
+        // Move players back to the original channel
+        if (originalVoiceChannel) {
+            for (const member of [...teamA, ...teamB]) {
+                try {
+                    if (member.voice.channelId === channelA.id || member.voice.channelId === channelB.id) {
+                        await member.voice.setChannel(originalVoiceChannel);
+                    }
+                } catch { /* ignore move errors */ }
+            }
+        }
 
         try {
             await channelA.delete().catch(() => {});
@@ -516,6 +604,17 @@ async function finalizeMix(
     });
 
     cleanupCollector.on('end', async () => {
+        // Move players back if they are still there
+        if (originalVoiceChannel) {
+            for (const member of [...teamA, ...teamB]) {
+                try {
+                    if (member.voice.channelId === channelA.id || member.voice.channelId === channelB.id) {
+                        await member.voice.setChannel(originalVoiceChannel);
+                    }
+                } catch { /* ignore move errors */ }
+            }
+        }
+
         // Auto-cleanup after 2 hours
         try {
             await channelA.delete().catch(() => {});
@@ -537,20 +636,23 @@ function buildDraftEmbed(
     teamB: GuildMember[],
     available: GuildMember[],
     currentTurn: 'A' | 'B',
+    teamAName: string,
+    teamBName: string,
+    matchIndex: number,
 ): any {
     const currentCaptain = currentTurn === 'A' ? captainA : captainB;
 
     return createEmbed(interaction)
-        .setTitle('Draft — Selecao de jogadores')
+        .setTitle(`Draft — Selecao de jogadores (Partida ${matchIndex})`)
         .setDescription(`Vez de **${currentCaptain.displayName}** escolher um jogador.`)
         .addFields(
             {
-                name: `Time A — ${captainA.displayName} (Cap.)`,
+                name: `${teamAName} — ${captainA.displayName} (Cap.)`,
                 value: teamA.map(m => m.displayName).join('\n') || 'Vazio',
                 inline: true,
             },
             {
-                name: `Time B — ${captainB.displayName} (Cap.)`,
+                name: `${teamBName} — ${captainB.displayName} (Cap.)`,
                 value: teamB.map(m => m.displayName).join('\n') || 'Vazio',
                 inline: true,
             },
@@ -568,11 +670,12 @@ function buildDraftEmbed(
 function buildDraftSelectMenu(
     available: GuildMember[],
     _captain: GuildMember,
+    matchIndex: number,
 ): ActionRowBuilder<StringSelectMenuBuilder>[] {
     if (available.length === 0) return [];
 
     const select = new StringSelectMenuBuilder()
-        .setCustomId('draft_pick')
+        .setCustomId(`draft_pick_${matchIndex}`)
         .setPlaceholder('Escolher jogador')
         .addOptions(
             available.map(m =>

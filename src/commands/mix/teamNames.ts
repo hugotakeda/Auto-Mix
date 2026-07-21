@@ -53,10 +53,11 @@ export function pickTwoTeamNames(): [string, string] {
 /**
  * Divide um array de membros em dois times de forma aleatoria.
  */
-export function shuffleAndSplit<T>(members: T[]): [T[], T[]] {
+export function shuffleAndSplit<T>(members: T[], maxPerTeam = 5): [T[], T[]] {
     const shuffled = [...members].sort(() => Math.random() - 0.5);
-    const half = Math.floor(shuffled.length / 2);
-    return [shuffled.slice(0, half), shuffled.slice(half)];
+    const teamA = shuffled.slice(0, maxPerTeam);
+    const teamB = shuffled.slice(maxPerTeam, maxPerTeam * 2);
+    return [teamA, teamB];
 }
 
 /**

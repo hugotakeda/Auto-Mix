@@ -61,6 +61,7 @@ export async function runPickBan(
     captainBName: string,
     teamAName: string,
     teamBName: string,
+    matchIndex: number,
 ): Promise<PickBanResult | null> {
     const sequence = format === 'MD3' ? MD3_SEQUENCE : MD1_SEQUENCE;
     const availableMaps = [...MAP_POOL];
@@ -73,7 +74,7 @@ export async function runPickBan(
 
     function buildEmbed(): EmbedBuilder {
         const embed = createEmbed(interaction)
-            .setTitle(`Picks e Bans — ${format}`)
+            .setTitle(`Picks e Bans — ${format} (Partida ${matchIndex})`)
             .setDescription(buildDescription());
 
         return embed;
@@ -136,7 +137,7 @@ export async function runPickBan(
     }
 
     // Send the initial pick/ban message
-    const message = await interaction.followUp({
+    const message = await (interaction.channel as any).send({
         embeds: [buildEmbed()],
         components: buildMapButtons(),
     }) as Message;
@@ -231,7 +232,7 @@ export async function runPickBan(
 
     // Build final result embed
     const resultEmbed = createEmbed(interaction)
-        .setTitle(`Mapas definidos — ${format}`);
+        .setTitle(`Mapas definidos — ${format} (Partida ${matchIndex})`);
 
     let resultDesc = '**Historico completo:**\n';
     for (const a of actions) {

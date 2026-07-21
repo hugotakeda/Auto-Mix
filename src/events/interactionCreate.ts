@@ -7,6 +7,7 @@ import {
     type UserSelectMenuInteraction,
 } from 'discord.js';
 import { createErrorEmbed } from '../utils/embedBuilder.js';
+import { resetPlayerMatches, resetPlayerKD } from '../utils/database.js';
 
 export const name = Events.InteractionCreate;
 export const once = false;
@@ -64,16 +65,39 @@ async function handleCommand(interaction: ChatInputCommandInteraction): Promise<
 }
 
 async function handleButton(interaction: ButtonInteraction): Promise<void> {
-    // Buttons are handled by collectors inside command files
-    // This is a fallback for expired collectors
-    if (interaction.customId.startsWith('pickban_') || interaction.customId.startsWith('captain_')) {
-        if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({
-                embeds: [createErrorEmbed('Esta interacao expirou. Inicie um novo mix.', interaction)],
-                flags: 64,
-            }).catch(() => {});
+    const guildId = interaction.guildId;
+    if (!guildId) return;
+
+    if (interaction.customId.startsWith('reset_matches_')) {
+        const targetId = interaction.customId.replace('reset_matches_', '');
+        if (interaction.user.id !== targetId) {
+            await interaction.reply({ content: '❌ Você não pode resetar as estatisticas no perfil de outra pessoa.', flags: 64 });
+            return;
         }
+
+        resetPlayerMatches(interaction.user.id, guildId);
+        await interaction.reply({
+            content: '✅ Suas **partidas** foram zeradas com sucesso! Use `/perfil` novamente para ver as alterações.',
+            flags: 64,
+        });
+        return;
     }
+
+    if (interaction.customId.startsWith('reset_kd_')) {
+        const targetId = interaction.customId.replace('reset_kd_', '');
+        if (interaction.user.id !== targetId) {
+            await interaction.reply({ content: '❌ Você não pode resetar as estatisticas no perfil de outra pessoa.', flags: 64 });
+            return;
+        }
+
+        resetPlayerKD(interaction.user.id, guildId);
+        await interaction.reply({
+            content: '✅ Seu **KD** foi zerado com sucesso! Use `/perfil` novamente para ver as alterações.',
+            flags: 64,
+        });
+        return;
+    }
+
 }
 
 async function handleStringSelectMenu(interaction: StringSelectMenuInteraction): Promise<void> {
@@ -107,8 +131,4 @@ async function handleStringSelectMenu(interaction: StringSelectMenuInteraction):
 
 async function handleUserSelectMenu(interaction: UserSelectMenuInteraction): Promise<void> {
     // Captain selection is handled by collectors inside the mix command
-    // This is a fallback
-    if (!interaction.replied && !interaction.deferred) {
-        await interaction.deferUpdate().catch(() => {});
-    }
 }

@@ -6,11 +6,13 @@ async function main() {
     console.log('[PREVIEW] Gerando card de perfil de exemplo...');
 
     const imageBuffer = await generateProfileCard({
-        displayName: 'HugoT',
+        displayName: 'takeda',
         avatarBuffer: null,
         role: 'Entry Fragger',
         kd: 1.45,
         matchesPlayed: 27,
+        wins: 15,
+        losses: 12,
         totalKills: 583,
         totalDeaths: 402,
         gcLevel: 15,

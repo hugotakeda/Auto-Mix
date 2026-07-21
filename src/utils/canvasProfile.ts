@@ -46,6 +46,8 @@ interface ProfileData {
     matchesPlayed: number;
     totalKills: number;
     totalDeaths: number;
+    wins: number;
+    losses: number;
     gcLevel: number | null;
     faceitLevel: string | null;
 }
@@ -123,7 +125,7 @@ function drawAvatarPlaceholder(ctx: SKRSContext2D, cx: number, cy: number, radiu
 
 export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
     const WIDTH = 950;
-    const HEIGHT = 420;
+    const HEIGHT = 490;
     const canvas = createCanvas(WIDTH, HEIGHT);
     const ctx = canvas.getContext('2d');
 
@@ -230,39 +232,45 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
     ctx.stroke();
 
     // --- Stats Row ---
-    const statsY = 160;
-    const statSpacing = 170;
+    const statsY = 158;
+    const statSpacing = 160;
+    const rowSpacing = 70;
 
     const stats = [
         { label: 'K/D RATIO', value: data.kd.toFixed(2) },
-        { label: 'PARTIDAS', value: String(data.matchesPlayed) },
         { label: 'ABATES', value: String(data.totalKills) },
         { label: 'MORTES', value: String(data.totalDeaths) },
+        { label: 'PARTIDAS', value: String(data.matchesPlayed) },
+        { label: 'VITÓRIAS', value: String(data.wins) },
+        { label: 'DERROTAS', value: String(data.losses) },
     ];
 
     stats.forEach((stat, i) => {
-        const x = textX + statSpacing * i;
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        const x = textX + statSpacing * col;
+        const y = statsY + rowSpacing * row;
 
         ctx.fillStyle = MUTED;
         ctx.font = '500 11px "IBM Plex Mono", monospace';
         ctx.textBaseline = 'top';
-        ctx.fillText(stat.label, x, statsY);
+        ctx.fillText(stat.label, x, y);
 
         ctx.fillStyle = PAPER;
         ctx.font = '800 44px "Big Shoulders Display", sans-serif';
-        ctx.fillText(stat.value, x, statsY + 16);
+        ctx.fillText(stat.value, x, y + 16);
     });
 
     // --- Separator line ---
     ctx.strokeStyle = LINE;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(textX, 245);
-    ctx.lineTo(WIDTH - 56, 245);
+    ctx.moveTo(textX, 310);
+    ctx.lineTo(WIDTH - 56, 310);
     ctx.stroke();
 
     // --- Levels Row ---
-    const levelY = 263;
+    const levelY = 328;
 
     // GC Level
     ctx.fillStyle = MUTED;
@@ -328,14 +336,14 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
         ctx.textBaseline = 'top';
 
         // Progress bar
-        const faceitNum = data.faceitLevel === 'Challenger' ? 11 : parseInt(data.faceitLevel);
+        const faceitNum = data.faceitLevel === 'Challenger' ? 10 : parseInt(data.faceitLevel);
         ctx.fillStyle = faceitColor;
         ctx.globalAlpha = 0.2;
         roundRect(ctx, faceitX + 152, levelY + 28, 160, 20, 3);
         ctx.fill();
         ctx.globalAlpha = 1;
         ctx.fillStyle = faceitColor;
-        const faceitBarWidth = Math.min(160, (faceitNum / 11) * 160);
+        const faceitBarWidth = Math.min(160, (faceitNum / 10) * 160);
         roundRect(ctx, faceitX + 152, levelY + 28, faceitBarWidth, 20, 3);
         ctx.fill();
     } else {

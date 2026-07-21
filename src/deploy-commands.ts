@@ -2,7 +2,10 @@ import { REST, Routes } from 'discord.js';
 import { config } from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import { pathToFileURL } from 'url';
+import { pathToFileURL, fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 config();
 
@@ -26,7 +29,7 @@ async function deployCommands(): Promise<void> {
     for (const category of categories) {
         const categoryPath = path.join(commandsPath, category);
         const commandFiles = fs.readdirSync(categoryPath).filter(file =>
-            file.endsWith('.ts') || file.endsWith('.js')
+            (file.endsWith('.ts') || file.endsWith('.js')) && !file.endsWith('.d.ts')
         );
 
         for (const file of commandFiles) {

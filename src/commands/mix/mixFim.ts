@@ -21,6 +21,17 @@ export const data = new SlashCommandBuilder()
             .setDescription('Total de mortes na partida')
             .setRequired(true)
             .setMinValue(0)
+    )
+    .addStringOption(option =>
+        option
+            .setName('resultado')
+            .setDescription('Resultado da partida para o seu time')
+            .setRequired(true)
+            .addChoices(
+                { name: 'Vitória', value: 'win' },
+                { name: 'Derrota', value: 'loss' },
+                { name: 'Empate', value: 'draw' }
+            )
     );
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -29,6 +40,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     const kills = interaction.options.getInteger('kills', true);
     const deaths = interaction.options.getInteger('deaths', true);
+    const resultado = interaction.options.getString('resultado', true) as 'win' | 'loss' | 'draw';
 
     if (kills === 0 && deaths === 0) {
         await interaction.reply({
@@ -45,7 +57,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     const matchKd = deaths > 0 ? kills / deaths : kills;
 
     // Update accumulated stats
-    const player = addPlayerStats(interaction.user.id, guildId, kills, deaths);
+    const player = addPlayerStats(interaction.user.id, guildId, kills, deaths, resultado);
 
     // Calculate accumulated KD
     const accumulatedKd = player.total_deaths > 0
@@ -62,12 +74,12 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
             },
             {
                 name: 'Acumulado',
-                value: `Total de abates: **${player.total_kills}**\nTotal de mortes: **${player.total_deaths}**\nK/D: **${accumulatedKd.toFixed(2)}**`,
+                value: `Vitórias: **${player.wins}**\nDerrotas: **${player.losses}**\nTotal abates: **${player.total_kills}**\nTotal mortes: **${player.total_deaths}**\nK/D: **${accumulatedKd.toFixed(2)}**`,
                 inline: true,
             },
             {
-                name: 'Partidas jogadas',
-                value: `**${player.matches_played}**`,
+                name: 'Partidas',
+                value: `Jogadas: **${player.matches_played}**\nWinrate: **${player.matches_played > 0 ? ((player.wins / player.matches_played) * 100).toFixed(0) : 0}%**`,
                 inline: false,
             },
         );

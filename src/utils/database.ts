@@ -41,6 +41,8 @@ function initTables(): void {
             total_kills INTEGER DEFAULT 0,
             total_deaths INTEGER DEFAULT 0,
             matches_played INTEGER DEFAULT 0,
+            wins INTEGER DEFAULT 0,
+            losses INTEGER DEFAULT 0,
             PRIMARY KEY (user_id, guild_id)
         );
     `);
@@ -75,6 +77,9 @@ function initTables(): void {
         );
     `);
 
+    try { db.run('ALTER TABLE players ADD COLUMN wins INTEGER DEFAULT 0;'); } catch {}
+    try { db.run('ALTER TABLE players ADD COLUMN losses INTEGER DEFAULT 0;'); } catch {}
+
     saveDatabase();
 }
 
@@ -87,6 +92,8 @@ export interface PlayerData {
     total_kills: number;
     total_deaths: number;
     matches_played: number;
+    wins: number;
+    losses: number;
 }
 
 export function getPlayer(userId: string, guildId: string): PlayerData | undefined {
@@ -125,24 +132,64 @@ export function updatePlayerRole(userId: string, guildId: string, role: string):
     saveDatabase();
 }
 
-export function addPlayerStats(userId: string, guildId: string, kills: number, deaths: number): PlayerData {
+export function addPlayerStats(userId: string, guildId: string, kills: number, deaths: number, result?: 'win' | 'loss' | 'draw'): PlayerData {
     if (!db) throw new Error('Database not initialized');
 
     upsertPlayer(userId, guildId);
+
+    const winInc = result === 'win' ? 1 : 0;
+    const lossInc = result === 'loss' ? 1 : 0;
 
     db.run(
         `UPDATE players
          SET total_kills = total_kills + ?,
              total_deaths = total_deaths + ?,
-             matches_played = matches_played + 1
+             matches_played = matches_played + 1,
+             wins = wins + ?,
+             losses = losses + ?
          WHERE user_id = ? AND guild_id = ?`,
-        [kills, deaths, userId, guildId]
+        [kills, deaths, winInc, lossInc, userId, guildId]
     );
 
     db.run(
         `INSERT INTO player_match_stats (user_id, guild_id, kills, deaths)
          VALUES (?, ?, ?, ?)`,
         [userId, guildId, kills, deaths]
+    );
+
+    saveDatabase();
+    return getPlayer(userId, guildId)!;
+}
+
+export function resetPlayerKD(userId: string, guildId: string): PlayerData {
+    if (!db) throw new Error('Database not initialized');
+
+    upsertPlayer(userId, guildId);
+
+    db.run(
+        `UPDATE players
+         SET total_kills = 0,
+             total_deaths = 0
+         WHERE user_id = ? AND guild_id = ?`,
+        [userId, guildId]
+    );
+
+    saveDatabase();
+    return getPlayer(userId, guildId)!;
+}
+
+export function resetPlayerMatches(userId: string, guildId: string): PlayerData {
+    if (!db) throw new Error('Database not initialized');
+
+    upsertPlayer(userId, guildId);
+
+    db.run(
+        `UPDATE players
+         SET matches_played = 0,
+             wins = 0,
+             losses = 0
+         WHERE user_id = ? AND guild_id = ?`,
+        [userId, guildId]
     );
 
     saveDatabase();
