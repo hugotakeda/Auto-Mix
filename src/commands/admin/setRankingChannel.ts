@@ -4,7 +4,7 @@ import {
     PermissionFlagsBits,
     ChannelType
 } from 'discord.js';
-import { createEmbed } from '../../utils/embedBuilder.js';
+import { createEmbed, createErrorEmbed } from '../../utils/embedBuilder.js';
 import { setRankingChannel } from '../../utils/database.js';
 
 export const data = new SlashCommandBuilder()
@@ -27,19 +27,19 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     try {
         setRankingChannel(guildId, channel.id);
-        
+
         await interaction.reply({
             embeds: [
                 createEmbed(interaction)
-                    .setTitle('🏆 Canal de Ranking Configurado')
+                    .setTitle('Canal de Ranking Configurado')
                     .setDescription(`O canal para o ranking quinzenal foi configurado para <#${channel.id}>.`)
             ],
             ephemeral: true
         });
     } catch (error) {
-        console.error('Erro ao configurar canal de ranking:', error);
+        console.error('[AUTO MIX] Erro ao salvar canal de ranking:', error);
         await interaction.reply({
-            content: 'Ocorreu um erro ao salvar o canal no banco de dados.',
+            embeds: [createErrorEmbed('Ocorreu um erro ao salvar o canal no banco de dados.', interaction)],
             ephemeral: true
         });
     }

@@ -6,7 +6,7 @@ import {
     type ButtonInteraction,
     type UserSelectMenuInteraction,
 } from 'discord.js';
-import { createErrorEmbed } from '../utils/embedBuilder.js';
+import { createErrorEmbed, createEmbed } from '../utils/embedBuilder.js';
 import { resetPlayerMatches, resetPlayerKD } from '../utils/database.js';
 
 export const name = Events.InteractionCreate;
@@ -71,13 +71,13 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
     if (interaction.customId.startsWith('reset_matches_')) {
         const targetId = interaction.customId.replace('reset_matches_', '');
         if (interaction.user.id !== targetId) {
-            await interaction.reply({ content: '❌ Você não pode resetar as estatisticas no perfil de outra pessoa.', flags: 64 });
+            await interaction.reply({ embeds: [createErrorEmbed('Você não pode resetar as estatísticas no perfil de outra pessoa.', interaction)], flags: 64 });
             return;
         }
 
         resetPlayerMatches(interaction.user.id, guildId);
         await interaction.reply({
-            content: '✅ Suas **partidas** foram zeradas com sucesso! Use `/perfil` novamente para ver as alterações.',
+            embeds: [createEmbed(interaction).setDescription('Suas **partidas** foram zeradas com sucesso! Use `/perfil` novamente para ver as alterações.')],
             flags: 64,
         });
         return;
@@ -86,13 +86,13 @@ async function handleButton(interaction: ButtonInteraction): Promise<void> {
     if (interaction.customId.startsWith('reset_kd_')) {
         const targetId = interaction.customId.replace('reset_kd_', '');
         if (interaction.user.id !== targetId) {
-            await interaction.reply({ content: '❌ Você não pode resetar as estatisticas no perfil de outra pessoa.', flags: 64 });
+            await interaction.reply({ embeds: [createErrorEmbed('Você não pode resetar as estatísticas no perfil de outra pessoa.', interaction)], flags: 64 });
             return;
         }
 
         resetPlayerKD(interaction.user.id, guildId);
         await interaction.reply({
-            content: '✅ Seu **KD** foi zerado com sucesso! Use `/perfil` novamente para ver as alterações.',
+            embeds: [createEmbed(interaction).setDescription('Seu **KD** foi zerado com sucesso! Use `/perfil` novamente para ver as alterações.')],
             flags: 64,
         });
         return;

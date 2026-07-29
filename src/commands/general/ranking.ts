@@ -5,6 +5,7 @@ import {
 } from 'discord.js';
 import { getTopPlayers } from '../../utils/database.js';
 import { generateRankingCard, type RankingPlayer } from '../../utils/canvasRanking.js';
+import { createEmbed, createErrorEmbed } from '../../utils/embedBuilder.js';
 
 export const data = new SlashCommandBuilder()
     .setName('ranking')
@@ -17,15 +18,15 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     await interaction.deferReply();
 
     const topPlayers = getTopPlayers(guildId, 10);
-    
+
     if (topPlayers.length === 0) {
-        await interaction.editReply('Ainda não há jogadores com partidas o suficiente para gerar o ranking.');
+        await interaction.editReply({ embeds: [createErrorEmbed('Ainda não há jogadores com partidas o suficiente para gerar o ranking.', interaction)] });
         return;
     }
 
     try {
         const guild = await interaction.client.guilds.fetch(guildId);
-        
+
         // Populate avatars and display names
         const rankingPlayers: RankingPlayer[] = await Promise.all(topPlayers.map(async (p) => {
             let avatarBuffer: Buffer | null = null;
@@ -33,7 +34,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
             try {
                 const member = await guild.members.fetch(p.user_id);
-                displayName = member.displayName;
+                displayName = member.displayName.split(' ')[0];
                 const avatarUrl = member.user.displayAvatarURL({ extension: 'png', size: 128 });
                 const response = await fetch(avatarUrl);
                 if (response.ok) {
@@ -53,9 +54,13 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         const buffer = await generateRankingCard(rankingPlayers);
         const attachment = new AttachmentBuilder(buffer, { name: 'ranking.png' });
 
-        await interaction.editReply({ files: [attachment] });
+        const embed = createEmbed(interaction)
+            .setTitle('Confira o top:')
+            .setImage('attachment://ranking.png');
+
+        await interaction.editReply({ embeds: [embed], files: [attachment] });
     } catch (error) {
-        console.error('Erro ao gerar ranking:', error);
-        await interaction.editReply('Ocorreu um erro ao gerar o ranking.');
+        console.error('Erro ao gerar o rank:', error);
+        await interaction.editReply({ embeds: [createErrorEmbed('Ocorreu um erro ao gerar o ranking.', interaction)] });
     }
 }

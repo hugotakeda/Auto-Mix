@@ -48,7 +48,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     if (!guild) {
         guild = await interaction.client.guilds.fetch(guildId).catch(() => null) as any;
         if (!guild) {
-            await interaction.reply({ content: 'Não foi possível encontrar o servidor.', flags: 64 });
+            await interaction.reply({ embeds: [createErrorEmbed('Não foi possível encontrar o servidor.', interaction)], flags: 64 });
             return;
         }
     }
@@ -245,7 +245,7 @@ export async function handleSelectMenu(interaction: StringSelectMenuInteraction)
     if (!guild) {
         guild = await interaction.client.guilds.fetch(guildId).catch(() => null) as any;
         if (!guild) {
-            await interaction.reply({ content: 'Não foi possível encontrar o servidor.', flags: 64 });
+            await interaction.reply({ embeds: [createErrorEmbed('Não foi possível encontrar o servidor.', interaction)], flags: 64 });
             return;
         }
     }

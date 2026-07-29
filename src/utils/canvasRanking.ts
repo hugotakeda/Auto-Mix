@@ -143,7 +143,7 @@ export async function generateRankingCard(players: RankingPlayer[]): Promise<Buf
     ctx.fillStyle = PAPER;
     ctx.font = '800 48px "Sora", sans-serif';
     ctx.textBaseline = 'top';
-    ctx.fillText('RANKING TOP PLAYERS', 40, 40);
+    ctx.fillText('RANKING', 40, 40);
 
     ctx.fillStyle = TEXT_MUTED;
     ctx.font = '500 16px "JetBrains Mono", monospace';
@@ -202,7 +202,7 @@ export async function generateRankingCard(players: RankingPlayer[]): Promise<Buf
         ctx.fillText(player.displayName.toUpperCase(), 180, y + 20);
 
         // Stats
-        const statsX = 450;
+        const statsX = 520;
         const kdRatio = player.total_deaths === 0 ? player.total_kills.toFixed(2) : (player.total_kills / player.total_deaths).toFixed(2);
 
         ctx.fillStyle = TEXT_MUTED;

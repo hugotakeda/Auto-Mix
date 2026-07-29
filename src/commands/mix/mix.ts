@@ -393,7 +393,7 @@ async function finalizeMix(
     if (!guild) {
         guild = await interaction.client.guilds.fetch(guildId).catch(() => null) as any;
         if (!guild) {
-            await interaction.followUp({ content: 'Não foi possível encontrar o servidor.', flags: 64 });
+            await interaction.followUp({ embeds: [createErrorEmbed('Não foi possível encontrar o servidor.', interaction)], flags: 64 });
             return;
         }
     }

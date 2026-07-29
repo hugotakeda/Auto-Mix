@@ -35,11 +35,16 @@ async function deployCommands(): Promise<void> {
         for (const file of commandFiles) {
             const filePath = path.join(categoryPath, file);
             const fileUrl = pathToFileURL(filePath).href;
-            const commandModule = await import(fileUrl);
+            
+            try {
+                const commandModule = await import(fileUrl);
 
-            if ('data' in commandModule) {
-                commands.push(commandModule.data.toJSON());
-                console.log(`[AUTO MIX] Comando encontrado: /${commandModule.data.name}`);
+                if ('data' in commandModule) {
+                    commands.push(commandModule.data.toJSON());
+                    console.log(`[AUTO MIX] Comando encontrado: /${commandModule.data.name}`);
+                }
+            } catch (error) {
+                console.warn(`[AUTO MIX] Aviso: Falha ao carregar o comando ${file}. Arquivo ignorado.`);
             }
         }
     }

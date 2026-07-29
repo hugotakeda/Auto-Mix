@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { type Client, AttachmentBuilder, type TextChannel } from 'discord.js';
 import { getTopPlayers, getRankingChannel } from './database.js';
 import { generateRankingCard, type RankingPlayer } from './canvasRanking.js';
+import { createEmbed } from './embedBuilder.js';
 
 export function initScheduler(client: Client): void {
     // Schedule for the 15th and the last day of the month at 12:00 PM (noon)
@@ -13,7 +14,7 @@ export function initScheduler(client: Client): void {
     cron.schedule('0 12 * * *', async () => {
         const today = new Date();
         const date = today.getDate();
-        
+
         // Get the last day of the current month
         const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
 
@@ -23,7 +24,7 @@ export function initScheduler(client: Client): void {
         }
 
         console.log('[AUTO MIX] Executando rotina de ranking quinzenal...');
-        
+
         // Iterate over all guilds the bot is in
         for (const [guildId, guild] of client.guilds.cache) {
             try {
@@ -46,7 +47,7 @@ export function initScheduler(client: Client): void {
 
                     try {
                         const member = await guild.members.fetch(p.user_id);
-                        displayName = member.displayName;
+                        displayName = member.displayName.split(' ')[0];
                         const avatarUrl = member.user.displayAvatarURL({ extension: 'png', size: 128 });
                         const response = await fetch(avatarUrl);
                         if (response.ok) {
@@ -62,8 +63,16 @@ export function initScheduler(client: Client): void {
                 const buffer = await generateRankingCard(rankingPlayers);
                 const attachment = new AttachmentBuilder(buffer, { name: 'ranking.png' });
 
+                const embed = createEmbed()
+                    .setTitle('Confira o top:')
+                    .setImage('attachment://ranking.png')
+                    .setFooter({
+                        text: guild.name,
+                        iconURL: client.user?.displayAvatarURL() ?? undefined
+                    });
+
                 await (channel as TextChannel).send({
-                    content: '🏆 **RANKING QUINZENAL ATUALIZADO!** 🏆\nConfira os top players desta quinzena:',
+                    embeds: [embed],
                     files: [attachment]
                 });
             } catch (error) {
