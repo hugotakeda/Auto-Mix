@@ -1,84 +1,89 @@
 # Auto Mix
 
-Auto Mix is a Discord bot designed to completely automate Counter-Strike 2 (CS2) 5v5 matches ("mixes") within your server. 
+O **Auto Mix** é um bot para Discord criado para automatizar completamente as partidas 5v5 ("mixes") de Counter-Strike 2 (CS2) dentro do seu servidor.
 
-With zero configuration required for end-users, it seamlessly handles drafting, map selection, voice channel management, stat tracking, and competitive rankings.
+Com zero necessidade de configuração para os jogadores, o bot gerencia a divisão dos times, escolha de mapas, gerenciamento de canais de voz, rastreamento de estatísticas e a geração de rankings competitivos.
 
-## 🌟 Features
+## 🌟 Funcionalidades
 
-- 🎮 **Matchmaking Modes:** Choose between a Captain Draft (alternating player picks) or a Random Team generator.
-- 🗺️ **Pick & Ban System:** Built-in interactive map pick & ban for both BO1 (Best of 1) and BO3 (Best of 3) formats using the active duty map pool.
-- 🔊 **Auto Voice Channels:** Automatically creates temporary voice channels (e.g., `MIX - NAVI` vs `MIX - FURIA`), moves all 10 players into their respective team channels, and **restricts voice permissions so spectators are muted**. Cleans up automatically after the match.
-- 📊 **Stat Tracking & K/D:** Players can register their match stats (kills/deaths) to calculate their accumulated server-wide K/D ratio over time.
-- 🖼️ **Dynamic Profile Cards:** Generates a visually stunning, custom Canvas-based profile image showing the user's avatar, position, matches played, total K/D, Gamersclub level, and Faceit level. 
-- 🏆 **Automated Top 10 Ranking:** Automatically tracks the best players and generates a highly polished Canvas-based leaderboard image every 15 days (mid-month and end of month), sending it to a configured channel.
-- ⚙️ **Quick Setup:** Interactive setup panel for players to easily claim their in-game roles (IGL, Entry Fragger, AWPer, etc.) and competitive levels.
+- 🎮 **Modos de Matchmaking:** Escolha entre o formato "Capitães" (onde dois jogadores escolhem seus times alternadamente) ou o modo "Aleatório".
+- 🗺️ **Sistema de Pick & Ban:** Veto interativo de mapas (com a pool atual do CS2) embutido no Discord, suportando MD1 (Melhor de 1) e MD3 (Melhor de 3).
+- 🔊 **Canais de Voz Automáticos:** O bot cria canais de voz temporários (ex: `MIX - NAVI` vs `MIX - FURIA`), move os 10 jogadores automaticamente para seus respectivos times e **restringe as permissões de fala para que espectadores fiquem mutados**. Os canais são apagados sozinhos no final.
+- 📊 **Estatísticas e K/D:** Os jogadores registram seus abates e mortes no final da partida, e o bot calcula o K/D acumulado dentro do servidor.
+- ⚙️ **Configuração Rápida:** Painel interativo para os jogadores selecionarem suas funções em jogo (IGL, Entry, AWP, etc.) e níveis de GC/Faceit.
 
-## 🎨 Visual Identity ("Auto")
+## 🖼️ Imagens Dinâmicas (Cards & Ranking)
 
-The bot features a custom visual identity dubbed **"Auto"**, designed to look premium, modern, and esports-ready:
-- **Palette:** Graphite dark theme (`#1C1C1E`) with high-contrast Mint accent (`#3ECF8E`).
-- **Typography:** Uses **Sora** (for display/headers) and **JetBrains Mono** (for technical data and labels).
-- **Automated Graphics:** Profile and Ranking cards are generated programmatically using `@napi-rs/canvas`.
+O bot conta com a identidade visual **"Auto"** — um design premium, minimalista e voltado para os esports, utilizando tons de grafite, um verde menta de destaque e as fontes **Sora** e **JetBrains Mono**.
 
-## 💻 Requirements
+Todas as imagens são geradas dinamicamente e em alta resolução pelo bot usando o Canvas.
 
-- Node.js v20+ (recommended)
+### 👤 Cartão de Perfil (`/perfil`)
+Gera um cartão visual mostrando o avatar do usuário, sua função no jogo, K/D, total de abates, níveis e histórico de vitórias/derrotas.
+![Preview do Perfil](./profile_preview.png)
+
+### 🏆 Ranking Automático
+A cada 15 dias (no meio e no fim do mês), o bot rastreia os 10 melhores jogadores do servidor (com base em Kills e KD) e gera o leaderboard atualizado.
+![Preview do Ranking](./ranking_preview.png)
+
+## 💻 Requisitos
+
+- Node.js v20+ (recomendado)
 - TypeScript
-- `@napi-rs/canvas` (Requires specific system dependencies on some Linux distros. Note: `APT=canvas` is required on Discloud)
-- `better-sqlite3` (Reliable SQLite implementation)
+- `@napi-rs/canvas` (Atenção: algumas hospedagens Linux exigem dependências no sistema. No Discloud, adicione `APT=canvas` no config)
+- `better-sqlite3` (Banco de dados local rápido e confiável)
 
-## 🚀 Installation
+## 🚀 Instalação
 
-1. Clone the repository and install dependencies:
+1. Clone o repositório e instale as dependências:
 ```bash
 npm install
 ```
 
-2. Create a `.env` file in the root directory and add your Discord bot credentials:
+2. Crie um arquivo `.env` na raiz do projeto e adicione suas credenciais do bot do Discord:
 ```env
-DISCORD_TOKEN=your_bot_token_here
-CLIENT_ID=your_client_id_here
+DISCORD_TOKEN=seu_token_aqui
+CLIENT_ID=seu_client_id_aqui
 ```
 
-3. Deploy the slash commands to your Discord application:
+3. Registre os "Slash Commands" no Discord:
 ```bash
 npm run deploy
 ```
 
-4. Start the bot:
+4. Inicie o bot:
 ```bash
 npm start
 ```
-*(Alternatively, use `npm run dev` for development with auto-reload via tsx).*
+*(Para desenvolvimento local com recarregamento automático, utilize `npm run dev`).*
 
-## 📌 Usage / Commands
+## 📌 Comandos
 
-- `/setup` - (Admin only) Sends the initial configuration panel to a channel.
-- `/mix` - Starts a 5v5 mix. Requires exactly 10 players in a voice channel.
-- `/mix-fim` - Registers your kills and deaths after a match.
-- `/perfil` - Displays your generated profile card.
-- `/ranking` - Instantly generates and displays the Top 10 Ranking image.
-- `/set-ranking-channel` - (Admin only) Sets the channel where the automated bi-weekly (quinzenal) ranking will be posted.
-- `/reset-kd` - (Admin only) Resets a player's K/D stats.
-- `/reset-partidas` - (Admin only) Resets a player's match count.
+- `/setup` - (Apenas Admins) Envia o painel de configuração inicial para os jogadores pegarem seus cargos.
+- `/mix` - Inicia um mix 5v5. Exige que exatamente 10 jogadores estejam no mesmo canal de voz.
+- `/mix-fim` - Registra os abates e mortes após a partida.
+- `/perfil` - Gera e exibe o seu cartão de perfil personalizado.
+- `/ranking` - Gera instantaneamente a imagem do Top 10 atual do servidor.
+- `/set-ranking-channel` - (Apenas Admins) Define o canal oficial onde o ranking quinzenal será postado automaticamente.
+- `/reset-kd` - (Apenas Admins) Zera os status de K/D de um jogador específico.
+- `/reset-partidas` - (Apenas Admins) Zera o número de partidas jogadas.
 
-## 🏗️ Architecture
+## 🏗️ Arquitetura
 
-- Built with [Discord.js v14](https://discord.js.org/)
-- Database handled locally via `better-sqlite3`
-- Fully typed with TypeScript
-- High-performance image generation powered by `@napi-rs/canvas`
-- Automated jobs powered by `node-cron`
+- Desenvolvido sobre [Discord.js v14](https://discord.js.org/)
+- Banco de dados leve rodando em `better-sqlite3`
+- Fortemente tipado com TypeScript
+- Geração de imagens otimizada com `@napi-rs/canvas`
+- Rotinas e eventos automáticos controlados por `node-cron`
 
-## 📦 Deployment (Discloud)
+## 📦 Hospedagem (Discloud)
 
-To package the bot for hosting:
+Para empacotar o bot antes de fazer o upload para o Discloud:
 ```bash
 node zip-bot.js
 ```
-This script bundles the bot into a `.zip` file while preserving correct Linux permissions and explicitly ignoring `node_modules` and `data.db` to prevent data loss.
+Este script cria o `.zip` ignorando com segurança o banco de dados (`data.db`) e a pasta `node_modules`, além de aplicar as permissões corretas para rodar em servidores Linux.
 
-## 📜 License
+## 📜 Licença
 
-Private use. Developed for the Auto Bot ecosystem.
+Uso Privado. Desenvolvido para o ecossistema Auto Bot.
