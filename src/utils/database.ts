@@ -77,6 +77,13 @@ function initTables(): void {
         );
     `);
 
+    db.run(`
+        CREATE TABLE IF NOT EXISTS guild_settings (
+            guild_id TEXT PRIMARY KEY,
+            ranking_channel_id TEXT
+        );
+    `);
+
     try { db.run('ALTER TABLE players ADD COLUMN wins INTEGER DEFAULT 0;'); } catch {}
     try { db.run('ALTER TABLE players ADD COLUMN losses INTEGER DEFAULT 0;'); } catch {}
 
@@ -270,3 +277,67 @@ export function getPlayerMatches(userId: string, guildId: string): MatchData[] {
     stmt.free();
     return results;
 }
+
+export function getTotalMatchesCount(): number {
+    if (!db) return 0;
+    
+    const stmt = db.prepare('SELECT COUNT(*) as count FROM matches');
+    if (stmt.step()) {
+        const row = stmt.getAsObject() as { count: number };
+        stmt.free();
+        return row.count || 0;
+    }
+    
+    stmt.free();
+    return 0;
+}
+
+// --- Ranking operations ---
+
+export function getTopPlayers(guildId: string, limit: number = 10): PlayerData[] {
+    if (!db) return [];
+
+    const results: PlayerData[] = [];
+    const stmt = db.prepare(
+        `SELECT * FROM players
+         WHERE guild_id = ? AND matches_played > 0
+         ORDER BY total_kills DESC
+         LIMIT ?`
+    );
+    stmt.bind([guildId, limit]);
+
+    while (stmt.step()) {
+        results.push(stmt.getAsObject() as any as PlayerData);
+    }
+
+    stmt.free();
+    return results;
+}
+
+export function setRankingChannel(guildId: string, channelId: string): void {
+    if (!db) throw new Error('Database not initialized');
+
+    db.run(
+        'INSERT OR REPLACE INTO guild_settings (guild_id, ranking_channel_id) VALUES (?, ?)',
+        [guildId, channelId]
+    );
+
+    saveDatabase();
+}
+
+export function getRankingChannel(guildId: string): string | null {
+    if (!db) return null;
+
+    const stmt = db.prepare('SELECT ranking_channel_id FROM guild_settings WHERE guild_id = ?');
+    stmt.bind([guildId]);
+
+    if (stmt.step()) {
+        const row = stmt.getAsObject() as { ranking_channel_id: string | null };
+        stmt.free();
+        return row.ranking_channel_id;
+    }
+
+    stmt.free();
+    return null;
+}
+

@@ -12,10 +12,10 @@ function registerFonts(): void {
             const fontFiles = fs.readdirSync(fontsDir);
             for (const file of fontFiles) {
                 const fontPath = path.join(fontsDir, file);
-                if (file.includes('BigShoulder')) {
-                    GlobalFonts.registerFromPath(fontPath, 'Big Shoulders Display');
-                } else if (file.includes('IBMPlexMono')) {
-                    GlobalFonts.registerFromPath(fontPath, 'IBM Plex Mono');
+                if (file.includes('Sora')) {
+                    GlobalFonts.registerFromPath(fontPath, 'Sora');
+                } else if (file.includes('JetBrainsMono') || file.includes('JetBrains-Mono') || file.includes('JetBrains_Mono')) {
+                    GlobalFonts.registerFromPath(fontPath, 'JetBrains Mono');
                 } else if (file.includes('Inter')) {
                     GlobalFonts.registerFromPath(fontPath, 'Inter');
                 }
@@ -28,15 +28,17 @@ function registerFonts(): void {
 
 registerFonts();
 
-// --- Color constants (from identity) ---
-const INK = '#0B0D10';
-const SURFACE = '#14171C';
-const SURFACE_2 = '#1B2028';
-const CT_BLUE = '#5B8FC7';
-const T_AMBER = '#D98A3D';
-const PAPER = '#EDEEF0';
-const MUTED = '#8891A0';
-const LINE = 'rgba(255,255,255,0.09)';
+// --- Color constants (identidade visual "Auto" — paleta neutra, um único acento) ---
+const INK = '#1C1C1E';        // Grafite — fundo base
+const SURFACE = '#212124';    // Grafite claro — superfície / cards
+const SURFACE_2 = '#26262A';  // superfície elevada (avatar, badges vazios)
+const BORDER = '#2C2C2F';     // Borda — divisores e contornos
+const PAPER = '#FAFAFA';      // Branco gelo — texto principal
+const MUTED = '#A6A6A9';      // Cinza médio — texto secundário
+const TEXT_MUTED = '#6F6F73'; // texto terciário / labels em mono
+const ACCENT = '#3ECF8E';     // Menta — acento, status e ação
+const ACCENT_INK = '#08281A'; // texto escuro sobre fundo menta
+const BAD = '#E5675F';        // vermelho de estado — erro / negativo
 
 interface ProfileData {
     displayName: string;
@@ -66,37 +68,53 @@ function roundRect(ctx: SKRSContext2D, x: number, y: number, w: number, h: numbe
     ctx.closePath();
 }
 
-function drawAutoMixLogo(ctx: SKRSContext2D, x: number, y: number, scale: number): void {
+/**
+ * Desenha o mark oficial da identidade "Auto": dois arcos formando um anel
+ * quebrado + duas setas triangulares (uma em branco-gelo, uma em menta),
+ * replicando a construção geométrica do símbolo (raio 150/256, traço 39/512).
+ */
+function drawAutoMark(ctx: SKRSContext2D, x: number, y: number, scale: number): void {
+    const minX = 89.3;
+    const minY = 171.1;
+
     ctx.save();
-    ctx.translate(x, y);
+    ctx.translate(x - minX * scale, y - minY * scale);
     ctx.scale(scale, scale);
 
-    // Left pentagon (CT Blue)
-    ctx.fillStyle = CT_BLUE;
-    ctx.beginPath();
-    ctx.moveTo(20, 55);
-    ctx.lineTo(65, 55);
-    ctx.lineTo(90, 100);
-    ctx.lineTo(65, 145);
-    ctx.lineTo(20, 145);
-    ctx.closePath();
-    ctx.fill();
+    const cx = 256;
+    const cy = 256;
+    const r = 150;
 
-    // Right pentagon (T Amber)
-    ctx.fillStyle = T_AMBER;
-    ctx.beginPath();
-    ctx.moveTo(180, 55);
-    ctx.lineTo(135, 55);
-    ctx.lineTo(110, 100);
-    ctx.lineTo(135, 145);
-    ctx.lineTo(180, 145);
-    ctx.closePath();
-    ctx.fill();
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 39;
+    ctx.strokeStyle = PAPER;
 
-    // Center node
+    // Arco inferior
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, (27 * Math.PI) / 180, (153 * Math.PI) / 180);
+    ctx.stroke();
+
+    // Arco superior
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, (207 * Math.PI) / 180, (333 * Math.PI) / 180);
+    ctx.stroke();
+
+    // Ponta de seta — branco gelo
     ctx.fillStyle = PAPER;
     ctx.beginPath();
-    ctx.arc(100, 100, 9, 0, Math.PI * 2);
+    ctx.moveTo(98.4, 277.2);
+    ctx.lineTo(155.4, 307.3);
+    ctx.lineTo(89.3, 340.9);
+    ctx.closePath();
+    ctx.fill();
+
+    // Ponta de seta — menta (acento)
+    ctx.fillStyle = ACCENT;
+    ctx.beginPath();
+    ctx.moveTo(413.6, 234.8);
+    ctx.lineTo(356.6, 204.7);
+    ctx.lineTo(422.7, 171.1);
+    ctx.closePath();
     ctx.fill();
 
     ctx.restore();
@@ -143,11 +161,8 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
         }
     }
 
-    // --- Left gradient border ---
-    const grad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
-    grad.addColorStop(0, CT_BLUE);
-    grad.addColorStop(1, T_AMBER);
-    ctx.fillStyle = grad;
+    // --- Left accent border (acento único) ---
+    ctx.fillStyle = ACCENT;
     ctx.fillRect(0, 0, 5, HEIGHT);
 
     // --- Surface card ---
@@ -156,7 +171,7 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
     ctx.fill();
 
     // Inner border
-    ctx.strokeStyle = LINE;
+    ctx.strokeStyle = BORDER;
     ctx.lineWidth = 1;
     roundRect(ctx, 24, 20, WIDTH - 48, HEIGHT - 40, 8);
     ctx.stroke();
@@ -174,11 +189,8 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
     ctx.arc(avatarCenterX, avatarCenterY, avatarSize / 2 + 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Avatar border gradient
-    const avatarBorderGrad = ctx.createLinearGradient(avatarX, avatarY, avatarX, avatarY + avatarSize);
-    avatarBorderGrad.addColorStop(0, CT_BLUE);
-    avatarBorderGrad.addColorStop(1, T_AMBER);
-    ctx.strokeStyle = avatarBorderGrad;
+    // Avatar border (acento único)
+    ctx.strokeStyle = ACCENT;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.arc(avatarCenterX, avatarCenterY, avatarSize / 2 + 3, 0, Math.PI * 2);
@@ -205,7 +217,7 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
     // --- Display Name ---
     const textX = 230;
     ctx.fillStyle = PAPER;
-    ctx.font = '800 40px "Big Shoulders Display", sans-serif';
+    ctx.font = '800 40px "Sora", sans-serif';
     ctx.textBaseline = 'top';
     ctx.fillText(data.displayName.toUpperCase(), textX, 52);
 
@@ -214,9 +226,9 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
     const roleText = data.role ? data.role.toUpperCase() : 'SEM FUNCAO DEFINIDA';
 
     // Role background pill
-    ctx.font = '500 13px "IBM Plex Mono", monospace';
+    ctx.font = '500 13px "JetBrains Mono", monospace';
     const roleWidth = ctx.measureText(roleText).width + 24;
-    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillStyle = SURFACE_2;
     roundRect(ctx, textX, roleY, roleWidth, 26, 4);
     ctx.fill();
 
@@ -224,7 +236,7 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
     ctx.fillText(roleText, textX + 12, roleY + 7);
 
     // --- Separator line ---
-    ctx.strokeStyle = LINE;
+    ctx.strokeStyle = BORDER;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(textX, 142);
@@ -237,12 +249,12 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
     const rowSpacing = 70;
 
     const stats = [
-        { label: 'K/D RATIO', value: data.kd.toFixed(2) },
-        { label: 'ABATES', value: String(data.totalKills) },
-        { label: 'MORTES', value: String(data.totalDeaths) },
-        { label: 'PARTIDAS', value: String(data.matchesPlayed) },
-        { label: 'VITÓRIAS', value: String(data.wins) },
-        { label: 'DERROTAS', value: String(data.losses) },
+        { label: 'K/D RATIO', value: data.kd.toFixed(2), color: PAPER },
+        { label: 'ABATES', value: String(data.totalKills), color: PAPER },
+        { label: 'MORTES', value: String(data.totalDeaths), color: PAPER },
+        { label: 'PARTIDAS', value: String(data.matchesPlayed), color: PAPER },
+        { label: 'VITÓRIAS', value: String(data.wins), color: PAPER },
+        { label: 'DERROTAS', value: String(data.losses), color: PAPER },
     ];
 
     stats.forEach((stat, i) => {
@@ -251,18 +263,18 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
         const x = textX + statSpacing * col;
         const y = statsY + rowSpacing * row;
 
-        ctx.fillStyle = MUTED;
-        ctx.font = '500 11px "IBM Plex Mono", monospace';
+        ctx.fillStyle = TEXT_MUTED;
+        ctx.font = '500 11px "JetBrains Mono", monospace';
         ctx.textBaseline = 'top';
         ctx.fillText(stat.label, x, y);
 
-        ctx.fillStyle = PAPER;
-        ctx.font = '800 44px "Big Shoulders Display", sans-serif';
+        ctx.fillStyle = stat.color;
+        ctx.font = '800 44px "Sora", sans-serif';
         ctx.fillText(stat.value, x, y + 16);
     });
 
     // --- Separator line ---
-    ctx.strokeStyle = LINE;
+    ctx.strokeStyle = BORDER;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(textX, 310);
@@ -273,8 +285,8 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
     const levelY = 328;
 
     // GC Level
-    ctx.fillStyle = MUTED;
-    ctx.font = '500 11px "IBM Plex Mono", monospace';
+    ctx.fillStyle = TEXT_MUTED;
+    ctx.font = '500 11px "JetBrains Mono", monospace';
     ctx.textBaseline = 'top';
     ctx.fillText('GAMERSCLUB', textX, levelY);
 
@@ -287,7 +299,7 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
         ctx.fill();
 
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = '700 16px "Big Shoulders Display", sans-serif';
+        ctx.font = '700 16px "Sora", sans-serif';
         ctx.textBaseline = 'middle';
         ctx.fillText(`LEVEL ${data.gcLevel}`, textX + 14, levelY + 38);
         ctx.textBaseline = 'top';
@@ -306,8 +318,8 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
         ctx.fillStyle = SURFACE_2;
         roundRect(ctx, textX, levelY + 20, 120, 36, 4);
         ctx.fill();
-        ctx.fillStyle = MUTED;
-        ctx.font = '500 14px "IBM Plex Mono", monospace';
+        ctx.fillStyle = TEXT_MUTED;
+        ctx.font = '500 14px "JetBrains Mono", monospace';
         ctx.textBaseline = 'middle';
         ctx.fillText('N/A', textX + 14, levelY + 38);
         ctx.textBaseline = 'top';
@@ -315,8 +327,8 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
 
     // Faceit Level
     const faceitX = textX + 360;
-    ctx.fillStyle = MUTED;
-    ctx.font = '500 11px "IBM Plex Mono", monospace';
+    ctx.fillStyle = TEXT_MUTED;
+    ctx.font = '500 11px "JetBrains Mono", monospace';
     ctx.textBaseline = 'top';
     ctx.fillText('FACEIT', faceitX, levelY);
 
@@ -329,7 +341,7 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
         ctx.fill();
 
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = '700 16px "Big Shoulders Display", sans-serif';
+        ctx.font = '700 16px "Sora", sans-serif';
         ctx.textBaseline = 'middle';
         const faceitLabel = data.faceitLevel === 'Challenger' ? 'CHALLENGER' : `LEVEL ${data.faceitLevel}`;
         ctx.fillText(faceitLabel, faceitX + 14, levelY + 38);
@@ -350,31 +362,27 @@ export async function generateProfileCard(data: ProfileData): Promise<Buffer> {
         ctx.fillStyle = SURFACE_2;
         roundRect(ctx, faceitX, levelY + 20, 140, 36, 4);
         ctx.fill();
-        ctx.fillStyle = MUTED;
-        ctx.font = '500 14px "IBM Plex Mono", monospace';
+        ctx.fillStyle = TEXT_MUTED;
+        ctx.font = '500 14px "JetBrains Mono", monospace';
         ctx.textBaseline = 'middle';
         ctx.fillText('N/A', faceitX + 14, levelY + 38);
         ctx.textBaseline = 'top';
     }
 
-    // --- Auto Mix logo watermark (bottom-left, subtle) ---
-    ctx.globalAlpha = 0.1;
-    drawAutoMixLogo(ctx, 40, HEIGHT - 95, 0.35);
+    // --- Auto mark watermark (top-right, subtle, aligned with player name)
+    ctx.globalAlpha = 0.12;
+    drawAutoMark(ctx, WIDTH - 130, 65, 0.22);
     ctx.globalAlpha = 1;
 
     // --- "AUTO MIX" text watermark (bottom-right) ---
-    ctx.fillStyle = MUTED;
-    ctx.globalAlpha = 0.3;
-    ctx.font = '800 14px "Big Shoulders Display", sans-serif';
+    ctx.fillStyle = TEXT_MUTED;
+    ctx.globalAlpha = 0.5;
+    ctx.font = '800 14px "Sora", sans-serif';
     ctx.textBaseline = 'bottom';
     ctx.fillText('AUTO MIX', WIDTH - 110, HEIGHT - 30);
     ctx.globalAlpha = 1;
 
-    // --- Bottom accent bars ---
-    ctx.fillStyle = CT_BLUE;
-    ctx.fillRect(24, HEIGHT - 24, (WIDTH - 48) / 2, 4);
-    ctx.fillStyle = T_AMBER;
-    ctx.fillRect(24 + (WIDTH - 48) / 2, HEIGHT - 24, (WIDTH - 48) / 2, 4);
+    // Bottom accent bar removed as requested
 
     return canvas.toBuffer('image/png');
 }
