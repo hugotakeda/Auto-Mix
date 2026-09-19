@@ -1,0 +1,36 @@
+{
+  "name": "auto-mix",
+  "version": "1.0.0",
+  "description": "Bot de Discord para mix 5v5 automatico de Counter-Strike 2",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "deploy": "tsx src/deploy-commands.ts",
+    "build:local": "tsc && npm run copy:web",
+    "typecheck": "tsc --noEmit",
+    "copy:web": "node scripts/copy-web.mjs"
+  },
+  "dependencies": {
+    "@laihoe/demoparser2": "^0.42.0",
+    "@napi-rs/canvas": "^0.1.68",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.2.1",
+    "multer": "^2.4.0",
+    "node-cron": "^4.6.0",
+    "sql.js": "^1.11.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^22.15.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/sql.js": "^1.4.9",
+    "archiver": "^8.0.0",
+    "playwright": "^1.63.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

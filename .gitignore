@@ -1,0 +1,10 @@
+node_modules/
+dist/
+data.db
+.env
+
+# Demos ficam aqui so enquanto o parser roda
+tmp-demos/
+
+# Zips de deploy
+*.zip

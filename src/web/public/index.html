@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto Mix</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">Auto Mix</span>
+    </div>
+
+    <nav class="tabs" id="tabs" role="tablist" hidden>
+      <button class="tab is-active" role="tab" data-view="ranking">Ranking</button>
+      <button class="tab" role="tab" data-view="jogadores">Jogadores</button>
+      <button class="tab" role="tab" data-view="partidas">Partidas</button>
+      <button class="tab" role="tab" data-view="enviar">Enviar demo</button>
+      <button class="tab" role="tab" data-view="perfil">Meu perfil</button>
+      <button class="tab tab-staff" role="tab" data-view="staff" id="tab-staff" hidden>Staff</button>
+    </nav>
+
+    <div class="session" id="session">
+      <span class="muted small">carregando…</span>
+    </div>
+  </div>
+</header>
+
+<!-- Tela que cobre o site pra quem não está logado -->
+<div class="wall" id="wall" hidden>
+  <div class="wall-box">
+    <span class="brand-mark wall-mark" aria-hidden="true"></span>
+    <h1 class="wall-title">Auto Mix</h1>
+    <p class="wall-text" id="wall-text">
+      Ranking, perfis e estatísticas das partidas do servidor.
+      Entre com o Discord pra continuar.
+    </p>
+    <a class="btn btn-primary" id="wall-btn" href="/auth/login">Entrar com Discord</a>
+  </div>
+</div>
+
+<main class="wrap" id="app" hidden>
+
+  <!-- ====================== RANKING ====================== -->
+  <section class="view is-active" id="view-ranking">
+    <div class="view-head">
+      <div>
+        <h1>Ranking</h1>
+        <p class="sub">Ordenado por ADR — dano médio por round, o indicador que menos mente sobre impacto. Clique num jogador pra ver o perfil.</p>
+      </div>
+      <div class="segmented" id="period" role="group" aria-label="Período">
+        <button data-period="week">7 dias</button>
+        <button data-period="biweek" class="is-active">15 dias</button>
+        <button data-period="month">30 dias</button>
+        <button data-period="all">Geral</button>
+      </div>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="card">
+      <div class="table-scroll">
+        <table class="table" id="ranking-table">
+          <thead>
+            <tr>
+              <th class="col-pos">#</th>
+              <th>Jogador</th>
+              <th class="num">ADR</th>
+              <th class="num">K/D</th>
+              <th class="num">K</th>
+              <th class="num">D</th>
+              <th class="num">A</th>
+              <th class="num">HS%</th>
+              <th class="num">Vit%</th>
+              <th class="num">Partidas</th>
+            </tr>
+          </thead>
+          <tbody id="ranking-body"></tbody>
+        </table>
+      </div>
+      <p class="empty" id="ranking-empty" hidden>Nenhuma demo processada nesse período ainda.</p>
+    </div>
+  </section>
+
+  <!-- ====================== JOGADORES ====================== -->
+  <section class="view" id="view-jogadores">
+    <div class="view-head">
+      <div>
+        <h1>Jogadores</h1>
+        <p class="sub">Todo mundo que já apareceu numa demo do servidor.</p>
+      </div>
+      <input class="search" id="player-search" type="search" placeholder="Buscar por nome…" autocomplete="off">
+    </div>
+
+    <div class="player-grid" id="player-grid"></div>
+    <p class="empty" id="players-empty" hidden>Nenhum jogador encontrado.</p>
+  </section>
+
+  <!-- ====================== PARTIDAS ====================== -->
+  <section class="view" id="view-partidas">
+    <div class="view-head">
+      <div>
+        <h1>Partidas</h1>
+        <p class="sub">Todas as demos já processadas, da mais recente pra mais antiga.</p>
+      </div>
+    </div>
+    <div id="matches"></div>
+    <p class="empty" id="matches-empty" hidden>Nenhuma partida importada ainda.</p>
+  </section>
+
+  <!-- ====================== ENVIAR DEMO ====================== -->
+  <section class="view" id="view-enviar">
+    <div class="view-head">
+      <div>
+        <h1>Enviar demo</h1>
+        <p class="sub">O bot lê o placar e credita as estatísticas por SteamID64. Vincule sua Steam no Discord com <code>/steam vincular</code>.</p>
+      </div>
+    </div>
+
+    <div id="upload-area">
+      <div class="card dropzone" id="dropzone" tabindex="0" role="button" aria-label="Escolher arquivo de demo">
+        <input type="file" id="file-input" accept=".dem" hidden>
+        <div class="dz-icon" aria-hidden="true"></div>
+        <p class="dz-title">Arraste o <strong>.dem</strong> aqui</p>
+        <p class="dz-sub">ou clique pra escolher — até 600 MB</p>
+      </div>
+
+      <div class="card upload-status" id="upload-status" hidden>
+        <div class="us-head">
+          <span class="us-name" id="us-name"></span>
+          <span class="us-state" id="us-state"></span>
+        </div>
+        <div class="progress"><div class="progress-fill" id="us-bar"></div></div>
+        <p class="us-detail muted small" id="us-detail"></p>
+      </div>
+
+      <p class="alert">
+        O arquivo <strong>não fica guardado</strong>. Depois que o bot lê o placar e as estatísticas,
+        a demo é apagada do servidor — por isso não há download aqui.
+      </p>
+
+      <h2 class="section-title">Envios recentes</h2>
+      <div class="card">
+        <div class="table-scroll">
+          <table class="table">
+            <thead>
+              <tr><th>Arquivo</th><th>Status</th><th>Quando</th></tr>
+            </thead>
+            <tbody id="jobs-body"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="jobs-empty" hidden>Nenhuma demo enviada ainda.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== MEU PERFIL ====================== -->
+  <section class="view" id="view-perfil">
+    <div class="view-head">
+      <div>
+        <h1>Meu perfil</h1>
+        <p class="sub">Suas partidas importadas de demo.</p>
+      </div>
+    </div>
+    <div id="profile"></div>
+  </section>
+
+  <!-- ====================== STAFF ====================== -->
+  <section class="view" id="view-staff">
+    <div class="view-head">
+      <div>
+        <h1>Staff</h1>
+        <p class="sub">Jogadores marcados. Só quem tem o cargo de staff vê esta aba e qualquer marcação no site.</p>
+      </div>
+    </div>
+    <div id="staff-list"></div>
+    <p class="empty" id="staff-empty" hidden>Nenhum jogador marcado.</p>
+  </section>
+
+  <!-- ====================== PERFIL DE OUTRO JOGADOR ====================== -->
+  <section class="view" id="view-player">
+    <button class="btn btn-ghost back-btn" id="player-back">&larr; Voltar</button>
+    <div id="player-detail"></div>
+  </section>
+
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true">
+    <button class="modal-close" id="modal-close" aria-label="Fechar">&times;</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
